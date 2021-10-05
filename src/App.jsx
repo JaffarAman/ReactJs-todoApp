@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import Header from "./components/Header";
 import styles from "./todoCss.module.css";
-import db from "./firebase";
+// import db from "./firebase";
 import { collection, addDoc, onSnapshot, doc } from "firebase/firestore";
-
+import {database , db} from "./firebase"
 const userCol = collection(db, "todo");
 const userCol2 = collection(db,"todo")
 const App = () => {
@@ -14,13 +14,20 @@ const App = () => {
   const [index, setIndex] = useState(null);
   const [value, setValue] = useState("");
   const [editInputValue, setEditInputValue] = useState(null);
-
+//   console.log(database)
   useEffect(() => {
-     const unsubscribe  =  onSnapshot(doc(userCol2), (doc) => {
+    //  const unsubscribe  =  onSnapshot(doc(userCol2), (doc) => {
       
-      return  console.log(doc.data());
-      
-    });
+    //   return  console.log(doc.data());
+    let dbdata = []
+    database.ref("/todos").on("child_added" , data=>{
+        dbdata.push(data.val())
+        setNotes([...dbdata])
+    })
+    // console.log(notes);
+    
+
+    // });
   }, []);
 
   const editInput = (e) => {
@@ -31,14 +38,19 @@ const App = () => {
 
   //ADD TODO ///
   const addTodo = async () => {
-    try {
-      const docRef = await addDoc(userCol, {
-        title: value,
-        iscomplete: false,
-      });
-    } catch (error) {
-      console.log(error);
-    }
+    // try {
+    //   const docRef = await addDoc(userCol, {
+    //     title: value,
+    //     iscomplete: false,
+    //   });
+    // } catch (error) {
+    //   console.log(error);
+    // }
+
+    database.ref("/todos").push({
+        title:value,
+        iscomplete : false
+    })
 
     // console.log(value);
     notes.unshift({ title: value, iscomplete: false });
