@@ -1,33 +1,34 @@
 import React, { useEffect, useState } from "react";
 import Header from "./components/Header";
 import styles from "./todoCss.module.css";
-// import db from "./firebase";
-import { collection, addDoc, onSnapshot, doc } from "firebase/firestore";
-import {database , db} from "./firebase"
-const userCol = collection(db, "todo");
-const userCol2 = collection(db,"todo")
+import { db } from "./firebase";
+import { addDoc, collection ,getDocs ,updateDoc , doc } from "firebase/firestore";
+
+const dbCol = collection(db, "todos");
+
 const App = () => {
   const [notes, setNotes] = useState([
     { title: "jaffar", iscomplete: false },
     { title: "Bilal", iscomplete: false },
   ]);
+
   const [index, setIndex] = useState(null);
   const [value, setValue] = useState("");
   const [editInputValue, setEditInputValue] = useState(null);
-//   console.log(database)
-  useEffect(() => {
-    //  const unsubscribe  =  onSnapshot(doc(userCol2), (doc) => {
-      
-    //   return  console.log(doc.data());
-    let dbdata = []
-    database.ref("/todos").on("child_added" , data=>{
-        dbdata.push(data.val())
-        setNotes([...dbdata])
-    })
-    // console.log(notes);
-    
 
-    // });
+  useEffect( () => {
+    const getData  = async ()=>{
+      const querySnapshot = await  getDocs(dbCol);
+      
+      let todo  = []
+      querySnapshot.forEach((doc) => {
+        console.log(`${doc.id} => ${doc.data()}`);
+        todo.push({key : doc.id, ...doc.data()})
+      });
+      setNotes([...todo])
+      console.log(todo)
+    }
+    getData()
   }, []);
 
   const editInput = (e) => {
@@ -38,21 +39,15 @@ const App = () => {
 
   //ADD TODO ///
   const addTodo = async () => {
-    // try {
-    //   const docRef = await addDoc(userCol, {
-    //     title: value,
-    //     iscomplete: false,
-    //   });
-    // } catch (error) {
-    //   console.log(error);
-    // }
+    try {
+      const docRef = await addDoc(dbCol, {
+        title: value,
+        iscomplete: false,
+      });
+    } catch (error) {
+      console.log(error);
+    }
 
-    database.ref("/todos").push({
-        title:value,
-        iscomplete : false
-    })
-
-    // console.log(value);
     notes.unshift({ title: value, iscomplete: false });
     setNotes([...notes]);
     setValue("");
@@ -67,6 +62,18 @@ const App = () => {
     notes.splice(e, 1);
     setNotes([...notes]);
   };
+
+
+  const handleComplete = (e)=>{
+    const id = notes[e.target.id].key
+      updateDoc(doc(dbCol , id , {
+            iscomplete : true
+    }))
+    console.log(id);
+    notes[e.target.id].iscomplete? (notes[e.target.id].iscomplete = false)
+                            : (notes[e.target.id].iscomplete = true);
+                          setNotes([...notes])
+  }
   return (
     <>
       <Header />
@@ -115,12 +122,7 @@ const App = () => {
                         type="checkbox"
                         id={ind}
                         name={`li${ind}`}
-                        onClick={(e) => {
-                          notes[e.target.id].iscomplete
-                            ? (notes[e.target.id].iscomplete = false)
-                            : (notes[e.target.id].iscomplete = true);
-                          setNotes([...notes]);
-                        }}
+                        onClick={(e) => handleComplete(e)}
                       />
                       {val.title}
                     </div>

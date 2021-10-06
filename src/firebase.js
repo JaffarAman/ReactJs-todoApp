@@ -8,7 +8,7 @@ import config from "./config";
 firebase.initializeApp(config);
 
 const db = firebase.firestore();
-const database = firebase.database();
+// const database = firebase.database();
 
 // export  default 
-export {database ,db} 
+export {db} 
