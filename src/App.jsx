@@ -2,14 +2,15 @@ import React, { useEffect, useState } from "react";
 import Header from "./components/Header";
 import styles from "./todoCss.module.css";
 import { db } from "./firebase";
-import { addDoc, collection ,getDocs ,updateDoc , doc } from "firebase/firestore";
+import { v4 as uuidv4 } from 'uuid'
+import { addDoc, collection ,getDocs ,updateDoc , doc ,setDoc , deleteDoc } from "firebase/firestore";
 
-const dbCol = collection(db, "todos");
+// const dbCol = collection(db, "todos");
 
 const App = () => {
   const [notes, setNotes] = useState([
-    { title: "jaffar", iscomplete: false },
-    { title: "Bilal", iscomplete: false },
+    // { title: "jaffar", iscomplete: false },
+    // { title: "Bilal", iscomplete: false },
   ]);
 
   const [index, setIndex] = useState(null);
@@ -17,62 +18,95 @@ const App = () => {
   const [editInputValue, setEditInputValue] = useState(null);
 
   useEffect( () => {
-    const getData  = async ()=>{
-      const querySnapshot = await  getDocs(dbCol);
-      
-      let todo  = []
-      querySnapshot.forEach((doc) => {
-        console.log(`${doc.id} => ${doc.data()}`);
-        todo.push({key : doc.id, ...doc.data()})
-      });
-      setNotes([...todo])
-      console.log(todo)
+    const getData  = async ()=> { 
+      const dbRef = collection(db , "todos") 
+      const docSnapshot = await getDocs(dbRef);
+      let todo = []
+      docSnapshot.forEach(data=>{
+          todo.push({...data.data() , key : data.id})
+        
+      })
+      setNotes(todo && todo || [])  
     }
     getData()
+
   }, []);
 
-  const editInput = (e) => {
+  const editInput = async (e) => {
+    const key = notes[e.id].key
+    const docRef = doc(db , "todos" , key )
+    await updateDoc(docRef , {
+        title  : editInputValue 
+    })
     console.log(editInputValue);
     notes[e.id].title = editInputValue;
     setIndex(null);
   };
 
   //ADD TODO ///
-  const addTodo = async () => {
-    try {
-      const docRef = await addDoc(dbCol, {
-        title: value,
-        iscomplete: false,
-      });
-    } catch (error) {
-      console.log(error);
-    }
 
-    notes.unshift({ title: value, iscomplete: false });
-    setNotes([...notes]);
-    setValue("");
+  const addTodo = async () => {
+    if(value.length > 3){
+      const key = uuidv4()
+      const dbRef = doc(db , "todos" , String(key));
+      
+           await setDoc(dbRef, {
+          title: value,
+          iscomplete: false,
+        })
+        .then((res)=>{
+          console.log(res)
+        })
+        .catch(err=>console.log(err))
+      
+      
+  
+      notes.unshift({ title: value, iscomplete: false , key : key});
+      setNotes([...notes]);
+      setValue("");
+    }else{
+      alert("enter correct todo")
+    }
+  
   };
   ///DELETE ALL TODOs///
-  const delAll = () => {
+  const delAll = async () => {
+    const dbRef = doc(db , "todos ")
+    await deleteDoc(dbRef)
     setNotes([]);
   };
 
   ///DELETE TODO//
-  const delTodo = (e) => {
+  const delTodo = async (e) => {
+    const key = notes[e.target.id].key
+    const docRef = doc(db , "todos" , key )
+    await deleteDoc(docRef)
+
     notes.splice(e, 1);
     setNotes([...notes]);
   };
 
 
-  const handleComplete = (e)=>{
-    const id = notes[e.target.id].key
-      updateDoc(doc(dbCol , id , {
-            iscomplete : true
-    }))
-    console.log(id);
-    notes[e.target.id].iscomplete? (notes[e.target.id].iscomplete = false)
-                            : (notes[e.target.id].iscomplete = true);
-                          setNotes([...notes])
+  const handleComplete = async (e)=>{
+    const key  = notes[e.target.id].key
+    console.log(e.target.checked)
+    const dbRef = doc(db , "todos" , key)
+    e.target.checked ?   await updateDoc(dbRef , {
+        iscomplete :true
+         
+    }) : await updateDoc(dbRef , {
+      iscomplete :false
+       
+  }) 
+
+    e.target.checked? (notes[e.target.id].iscomplete = true):
+    (notes[e.target.id].iscomplete = false)
+    setNotes([...notes])
+
+
+
+    
+    
   }
   return (
     <>
@@ -88,24 +122,24 @@ const App = () => {
             onChange={(e) => setValue(e.target.value)}
           />
           <button onClick={() => addTodo()}>ADD TODO</button>
-          <button onClick={() => delAll()}>DEL TODO'S</button>
+          {/* <button onClick={() => delAll()}>DEL TODO'S</button> */}
         </div>
 
         <div className={styles.notesBox}>
           <ul>
             {notes.map((val, ind) => {
               return ind === index ? (
-                <>
+                <div className={styles.inputEditBox}>
                   {" "}
                   <input
                     type="text"
                     onChange={(e) => setEditInputValue(e.target.value)}
-                    placeholder="edit input"
+                    placeholder={notes[index].title}
                   />
                   <button id={ind} onClick={(e) => editInput(e.target)}>
                     EDIT
                   </button>
-                </>
+                </div>
               ) : (
                 <>
                   <li
@@ -119,10 +153,11 @@ const App = () => {
                   >
                     <div>
                       <input
+                        
                         type="checkbox"
                         id={ind}
                         name={`li${ind}`}
-                        onClick={(e) => handleComplete(e)}
+                        onChange={(e) => handleComplete(e)}
                       />
                       {val.title}
                     </div>
